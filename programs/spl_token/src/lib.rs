@@ -26,6 +26,39 @@ pub mod spl_token {
 
         Ok(()) 
     }
+
+        pub fn transfer_tokens(ctx: Context<TransferSpl>, amount: u64) -> Result<()> {
+        let source_ata = &ctx.accounts.from_ata;
+        let destination_ata = &ctx.accounts.to_ata;
+        let authority = &ctx.accounts.from;
+        let token_program = &ctx.accounts.token_program;
+
+        // Transfer tokens from from_ata to to_ata
+        let cpi_accounts = Transfer { // Transfer instruction
+            from: source_ata.to_account_info().clone(),
+            to: destination_ata.to_account_info().clone(),
+            authority: authority.to_account_info().clone(),
+        };
+        let cpi_ctx = CpiContext::new(token_program.to_account_info(), cpi_accounts); // Create a CPI context
+        token::transfer(cpi_ctx, amount)?;
+        Ok(())
+    }
+
+    pub fn get_balance(ctx: Context<GetBalance>) -> Result<()> {
+		// Get the token account address, its owner & balance
+		let ata_pubkey = ctx.accounts.token_account.key();
+		let owner = ctx.accounts.token_account.owner; // the `owner` is a field in the ATA
+		let balance = ctx.accounts.token_account.amount; // the `amount` is a field in the ATA
+
+		// Print the balance information
+		msg!("Token Account Address: {}", ata_pubkey);
+		msg!("Token Account Owner: {}", owner);
+		msg!("Token Account Balance: {}", balance);
+		Ok(())
+}
+
+
+
 }
 
 
@@ -65,4 +98,21 @@ pub struct CreateMint<'info> {
     // As mentioned in the previous tutorial, it is only in charge of creating the ATA.
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct TransferSpl<'info> {
+    pub from: Signer<'info>,
+    #[account(mut)]
+    pub from_ata: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub to_ata: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>, // We are interacting with the Token Program
+}
+
+
+#[derive(Accounts)]
+pub struct GetBalance<'info> {
+    #[account(mut)]
+    pub token_account: Account<'info, TokenAccount>,
 }
